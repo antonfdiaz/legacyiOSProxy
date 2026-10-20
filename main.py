@@ -373,7 +373,7 @@ async def start_proxy(host,port):
 | |  __/ (_| | (_| | (__| |_| / ___/| | | (_) >  <| |_| |
 |_|\___|\__, |\__,_|\___|\__, \/    |_|  \___/_/\_\\__, |
         |___/            |___/                     |___/""")
-        print(f"legacyProxy v{VERSION} - MITM proxy for legacy iOS devices")
+        print(f"legacyiOSProxy v{VERSION} - MITM proxy for legacy iOS devices")
         print(f"[INFO] starting proxy at {host}:{port}...")
         ip_address = get_ip_address()
         print(f"[INFO] set the server to {ip_address}!")

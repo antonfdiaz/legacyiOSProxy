@@ -61,7 +61,7 @@ such as likes, comments, channel tabs, etc but the rest works well. Login not te
 
 ### Twitter App
 Tested with Twitter 5.12 on iOS 7 (iPhone 4S).
-- Requires installing the patched IPA (`twitter5.12_patched.ipa`) to remove client-side SSL Certificate Pinning.
+- Requires disabling client-side SSL Certificate Pinning.
 - Configure the account's `auth_token` and `ct0` session cookies as `twitter_auth_token` and `twitter_ct0` in `config.json`. A separate bearer token can be set as `twitter_bearer_token`.
 - Uses one persistent HTTP GraphQL session for the home timeline, search, profiles, tweets, followers, following and favorites. Chrome is only a fallback when no cookies are configured.
 - The Home timeline can be empty when followed accounts have no recent tweets. Posting and other write actions are not yet translated.
