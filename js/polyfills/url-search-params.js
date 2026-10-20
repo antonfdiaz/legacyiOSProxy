@@ -102,5 +102,53 @@
     return values.join("&");
   };
 
+  function pairIterator(pairs) {
+    var index = 0;
+    return {
+      next: function () {
+        if (index >= pairs.length) {
+          return {value: undefined, done: true};
+        }
+        return {value: pairs[index++], done: false};
+      }
+    };
+  }
+
+  URLSearchParams.prototype.entries = function () {
+    return pairIterator(this._pairs.slice());
+  };
+
+  URLSearchParams.prototype.keys = function () {
+    var iterator = this.entries();
+    return {
+      next: function () {
+        var item = iterator.next();
+        return {
+          value: item.done ? undefined : item.value[0],
+          done: item.done
+        };
+      }
+    };
+  };
+
+  URLSearchParams.prototype.values = function () {
+    var iterator = this.entries();
+    return {
+      next: function () {
+        var item = iterator.next();
+        return {
+          value: item.done ? undefined : item.value[1],
+          done: item.done
+        };
+      }
+    };
+  };
+
+  URLSearchParams.prototype.forEach = function (callback, thisArg) {
+    for (var i = 0; i < this._pairs.length; i += 1) {
+      callback.call(thisArg, this._pairs[i][1], this._pairs[i][0], this);
+    }
+  };
+
   root.URLSearchParams = URLSearchParams;
 }(window));

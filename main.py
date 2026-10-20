@@ -18,6 +18,11 @@ import PIL
 import pystray
 from threading import Thread
 from src.utils import set_config_value,get_ip_address
+from src.diagnostics.google_signin import (
+    is_google_signin_response,
+    log_identifier_compatibility,
+    log_response as log_google_signin_response,
+)
 import os
 import sys
 
@@ -257,16 +262,62 @@ class InterceptAddon:
         return host == domain or host.endswith("."+domain)
     
     def is_compat_exception(self,host):
+        # Google Search keeps its historical exception behavior. The Accounts
+        # host is intentionally handled as a document-only compatibility case.
+        if host == "accounts.google.com":
+            return False
         return any(
             self.matches_domain(host,domain)
             for domain in COMPAT_EXCEPTIONS
         )
+
+    def is_google_accounts_document(self,flow,host,content_type):
+        """Allow only safe HTML document responses through Accounts compat."""
+        if host != "accounts.google.com":
+            return False
+
+        request = flow.request
+        if str(getattr(request,"method","")).upper() != "GET":
+            return False
+
+        status_code = getattr(flow.response,"status_code",200)
+        try:
+            if not 200 <= int(status_code) < 300 or int(status_code) == 204:
+                return False
+        except (TypeError,ValueError):
+            return False
+
+        path = urlparse(request.url).path.lower()
+        if (
+            "/_/" in path
+            or "/oauth" in path
+            or path.rstrip("/").endswith("/token")
+        ):
+            return False
+
+        return "text/html" in content_type
+
+    def should_adapt_response(self,flow,host,content_type):
+        if host == "accounts.google.com":
+            return self.is_google_accounts_document(flow,host,content_type)
+        return not self.is_compat_exception(host)
         
     def response(self,flow):
         content_type = flow.response.headers.get("Content-Type","").lower()
 
         url = flow.request.url
         host = (urlparse(url).hostname or "").lower().rstrip(".")
+
+        if is_google_signin_response(flow):
+            log_google_signin_response(flow)
+            if urlparse(url).path.lower() == "/v3/signin/identifier":
+                document_eligible = self.is_google_accounts_document(
+                    flow,host,content_type)
+                log_identifier_compatibility(
+                    flow,
+                    compat_exception=self.is_compat_exception(host),
+                    document_eligible=document_eligible,
+                )
         
         self.github.response(flow) if self.github else None
         self.wikipedia.response(flow) if self.wikipedia else None
@@ -278,7 +329,7 @@ class InterceptAddon:
         if self.should_ignore_response(content_type):
             return
         
-        if not self.is_compat_exception(host):
+        if self.should_adapt_response(flow,host,content_type):
             if "text/html" in content_type or "text/css" in content_type:
                 user_agent = flow.request.headers.get("User-Agent","")
                 target = compat.detect_target(user_agent)
